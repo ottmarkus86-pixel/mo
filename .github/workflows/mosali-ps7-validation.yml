@@ -42,7 +42,7 @@ jobs:
             },
             @{
               Path = 'mosali-validation/START_MOSALI_PERFORMANCE_STABILITY_FIX_V1_0.ps1'
-              Sha  = '052073F77399057DC58025728B1E6FD52360B1163ECF34F627AA091C5086300B'
+              Sha  = '1C24092A5ACEE9EF5141B5AE2D67F7183F9E523D5CCF4C776F4D75334F352F5C'
             }
           )
 
