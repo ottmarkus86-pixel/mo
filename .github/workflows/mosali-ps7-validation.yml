@@ -13,7 +13,7 @@ on:
       - '.github/workflows/mosali-ps7-validation.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
@@ -22,11 +22,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Native PowerShell 7 parser and SHA validation
+      - name: Native PowerShell 7 parser and canonical SHA validation
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           if ($PSVersionTable.PSVersion.Major -lt 7) { throw "PowerShell 7 required: $($PSVersionTable.PSVersion)" }
+
+          function Get-CanonicalLfSha([string]$Path) {
+            $text = [IO.File]::ReadAllText($Path)
+            $text = $text.Replace("`r`n", "`n").Replace("`r", "`n")
+            $bytes = [Text.UTF8Encoding]::new($false).GetBytes($text)
+            return [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes))
+          }
 
           $files = @(
             @{
@@ -43,8 +50,8 @@ jobs:
           Write-Host "Native pwsh version: $version"
           foreach ($item in $files) {
             $path = Join-Path $PWD $item.Path
-            $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToUpperInvariant()
-            if ($actual -ne $item.Sha) { throw "SHA mismatch for $($item.Path): expected=$($item.Sha) actual=$actual" }
+            $actual = Get-CanonicalLfSha $path
+            if ($actual -ne $item.Sha) { throw "Canonical SHA mismatch for $($item.Path): expected=$($item.Sha) actual=$actual" }
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors) | Out-Null
@@ -52,6 +59,6 @@ jobs:
               $errors | Format-List | Out-String | Write-Host
               throw "PS7 parser failed for $($item.Path)"
             }
-            Write-Host "PASS PS7 PARSER + SHA: $($item.Path)"
+            Write-Host "PASS PS7 PARSER + CANONICAL SHA: $($item.Path)"
           }
           Write-Host 'PASS_NATIVE_PS7_VALIDATION'
