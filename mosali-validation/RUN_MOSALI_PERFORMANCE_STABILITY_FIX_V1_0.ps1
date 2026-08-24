@@ -37,7 +37,7 @@ function Get-OneListener([int]$Port) {
     if($x.Count -ne 1){ throw "Port $Port ListenerCount=$($x.Count), erwartet 1." }
     return $x[0]
 }
-function Proc([int]$Pid) { Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $Pid) -ErrorAction Stop }
+function Proc([int]$ProcessId) { Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $ProcessId) -ErrorAction Stop }
 function ConsolePython([string]$Exe) {
     $p=[System.IO.Path]::GetFullPath($Exe)
     if([System.IO.Path]::GetFileName($p).ToLowerInvariant() -eq 'pythonw.exe') {
