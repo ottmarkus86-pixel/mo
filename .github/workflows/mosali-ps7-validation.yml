@@ -7,6 +7,10 @@ on:
       - 'mosali-validation/START_MOSALI_PERFORMANCE_STABILITY_FIX_V1_0.ps1'
       - 'mosali-validation/trigger-20260824.txt'
       - '.github/workflows/mosali-ps7-validation.yml'
+  pull_request:
+    paths:
+      - 'mosali-validation/**'
+      - '.github/workflows/mosali-ps7-validation.yml'
 
 permissions:
   contents: write
@@ -50,22 +54,4 @@ jobs:
             }
             Write-Host "PASS PS7 PARSER + SHA: $($item.Path)"
           }
-
-          @"
-          PASS_NATIVE_PS7_VALIDATION
-          PowerShellVersion=$version
-          RunnerSHA256=8E404547317109BF52600A7D923A372FCA0628E1FC80D02F0AB3D2281A18F29E
-          LauncherSHA256=6C16B92B1235A957079820F1D412DF17E0AF32C7077D188FAD8390F51DABB9B6
-          "@ | Set-Content -LiteralPath 'mosali-validation/PS7_VALIDATION_RESULT.txt' -Encoding utf8
-
-      - name: Commit validation receipt
-        shell: pwsh
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add mosali-validation/PS7_VALIDATION_RESULT.txt
-          git diff --cached --quiet
-          if ($LASTEXITCODE -ne 0) {
-            git commit -m "Record PASS native PS7 validation"
-            git push
-          }
+          Write-Host 'PASS_NATIVE_PS7_VALIDATION'
