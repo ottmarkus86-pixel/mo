@@ -1,2 +1,2 @@
 Trigger native PowerShell 7 validation for MOSALI Performance Stability Fix V1.0.
-Run=5-FINAL
+Run=6-PINNED-PWSH7
