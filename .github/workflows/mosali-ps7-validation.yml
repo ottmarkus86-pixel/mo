@@ -1,0 +1,48 @@
+name: MOSALI PS7 Validation
+
+on:
+  push:
+    paths:
+      - 'mosali-validation/**'
+      - '.github/workflows/mosali-ps7-validation.yml'
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Native PowerShell 7 parser and SHA validation
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($PSVersionTable.PSVersion.Major -lt 7) { throw "PowerShell 7 required: $($PSVersionTable.PSVersion)" }
+
+          $files = @(
+            @{
+              Path = 'mosali-validation/RUN_MOSALI_PERFORMANCE_STABILITY_FIX_V1_0.ps1'
+              Sha  = '8E404547317109BF52600A7D923A372FCA0628E1FC80D02F0AB3D2281A18F29E'
+            },
+            @{
+              Path = 'mosali-validation/START_MOSALI_PERFORMANCE_STABILITY_FIX_V1_0.ps1'
+              Sha  = '6C16B92B1235A957079820F1D412DF17E0AF32C7077D188FAD8390F51DABB9B6'
+            }
+          )
+
+          Write-Host "Native pwsh version: $($PSVersionTable.PSVersion)"
+          foreach ($item in $files) {
+            $path = Join-Path $PWD $item.Path
+            $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToUpperInvariant()
+            if ($actual -ne $item.Sha) { throw "SHA mismatch for $($item.Path): expected=$($item.Sha) actual=$actual" }
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($path, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -ne 0) {
+              $errors | Format-List | Out-String | Write-Host
+              throw "PS7 parser failed for $($item.Path)"
+            }
+            Write-Host "PASS PS7 PARSER + SHA: $($item.Path)"
+          }
+
+          Write-Host 'PASS_NATIVE_PS7_VALIDATION'
