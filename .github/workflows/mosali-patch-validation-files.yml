@@ -1,0 +1,53 @@
+name: MOSALI Patch Validation Files
+
+on:
+  push:
+    paths:
+      - 'mosali-validation/patch-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Patch exact validation copies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runner = 'mosali-validation/RUN_MOSALI_PERFORMANCE_STABILITY_FIX_V1_0.ps1'
+          $launcher = 'mosali-validation/START_MOSALI_PERFORMANCE_STABILITY_FIX_V1_0.ps1'
+
+          $r = [IO.File]::ReadAllText($runner)
+          $old = 'function Proc([int]$Pid) { Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $Pid) -ErrorAction Stop }'
+          $new = 'function Proc([int]$ProcessId) { Get-CimInstance Win32_Process -Filter ("ProcessId={0}" -f $ProcessId) -ErrorAction Stop }'
+          if (-not $r.Contains($old)) { throw 'Expected runner patch anchor missing' }
+          $r = $r.Replace($old, $new)
+          [IO.File]::WriteAllText($runner, $r, [Text.UTF8Encoding]::new($false))
+
+          $l = [IO.File]::ReadAllText($launcher)
+          $l = $l.Replace('EB1F396740003ABF79B22C9235F18A20FB3473AC8DAE70DBE0E24E5514AFD106','DEF01982B73CA871E43681F1784D742A95ACCD0F50CFB3358309EDE087BFDACF')
+          [IO.File]::WriteAllText($launcher, $l, [Text.UTF8Encoding]::new($false))
+
+          function Canon([string]$p) {
+            $t=[IO.File]::ReadAllText($p).Replace("`r`n","`n").Replace("`r","`n")
+            $b=[Text.UTF8Encoding]::new($false).GetBytes($t)
+            [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($b))
+          }
+          if ((Canon $runner) -ne '5179615F0A6BFB41E1864607CD05BA023C2B912F23294E2B73D90658468542D6') { throw 'Final runner canonical SHA mismatch' }
+          if ((Canon $launcher) -ne '052073F77399057DC58025728B1E6FD52360B1163ECF34F627AA091C5086300B') { throw 'Final launcher canonical SHA mismatch' }
+
+      - name: Commit exact validation copies
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mosali-validation/RUN_MOSALI_PERFORMANCE_STABILITY_FIX_V1_0.ps1 mosali-validation/START_MOSALI_PERFORMANCE_STABILITY_FIX_V1_0.ps1
+          git commit -m "Update exact final MOSALI PS7 validation copies"
+          git push
